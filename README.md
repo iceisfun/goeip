@@ -2,6 +2,8 @@
 
 `goeip` is a pure Go implementation of the EtherNet/IP protocol, supporting both Explicit Messaging (UCMM) and Implicit Messaging (Cyclic I/O). It is designed to be a flexible and performant library for building EtherNet/IP Scanners and Adapters.
 
+![Barn Owl automates](docs/plcowl_readme.jpg)
+
 ## Features
 
 - **Encapsulation Protocol**: Full support for CIP encapsulation over TCP.
