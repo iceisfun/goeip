@@ -2,7 +2,7 @@
 
 `goeip` includes two command-line tools to demonstrate and verify the functionality of the library.
 
-![Barn Owl understanding tools](plcowl_tools.jpg)
+![Barn Owl understanding tools](plcowl_cli.jpg)
 
 ## Adapter (Server)
 
