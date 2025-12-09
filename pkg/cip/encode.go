@@ -27,3 +27,35 @@ func Marshal(v any) ([]byte, error) {
 
 	return buf.Bytes(), nil
 }
+
+// GoTypeToCIPType maps a Go type to a CIP Data Type.
+func GoTypeToCIPType(v any) (DataType, error) {
+	switch v.(type) {
+	case bool:
+		return TypeBOOL, nil
+	case int8:
+		return TypeSINT, nil
+	case int16:
+		return TypeINT, nil
+	case int32, int:
+		return TypeDINT, nil
+	case int64:
+		return TypeLINT, nil
+	case uint8:
+		return TypeUSINT, nil // or BYTE? USINT is usually preferred for numbers
+	case uint16:
+		return TypeUINT, nil // or WORD?
+	case uint32:
+		return TypeUDINT, nil // or DWORD?
+	case uint64:
+		return TypeULINT, nil // or LWORD?
+	case float32:
+		return TypeREAL, nil
+	case float64:
+		return TypeLREAL, nil
+	case string:
+		return TypeSTRING, nil // Default to standard STRING for now
+	default:
+		return 0, fmt.Errorf("cip: unsupported Go type for automatic mapping: %T", v)
+	}
+}

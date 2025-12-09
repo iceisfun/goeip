@@ -45,3 +45,27 @@ func NewReadTagRequest(tagPath Path, elements uint16) *MessageRouterRequest {
 		RequestData: reqData,
 	}
 }
+
+// NewWriteTagRequest creates a request to write a tag
+func NewWriteTagRequest(tagPath Path, dataType DataType, elements uint16, data []byte) *MessageRouterRequest {
+	// Write Tag Request Data:
+	// Data Type (UINT)
+	// Number of Elements (UINT)
+	// Data (...)
+
+	reqData := make([]byte, 4+len(data))
+	// Type
+	reqData[0] = byte(dataType)
+	reqData[1] = byte(dataType >> 8)
+	// Elements
+	reqData[2] = byte(elements)
+	reqData[3] = byte(elements >> 8)
+	// Data
+	copy(reqData[4:], data)
+
+	return &MessageRouterRequest{
+		Service:     ServiceWriteTag,
+		RequestPath: tagPath,
+		RequestData: reqData,
+	}
+}

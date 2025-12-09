@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+
 	"github.com/iceisfun/goeip/internal"
 	"github.com/iceisfun/goeip/pkg/cip"
 	"github.com/iceisfun/goeip/pkg/session"
@@ -65,6 +66,43 @@ func (c *Client) ReadTag(tagName string) ([]byte, error) {
 	// We return the raw data including type for now, or we could parse it.
 	// Let's return the raw data payload (excluding the type? No, type is important).
 	return resp.ResponseData, nil
+}
+
+// WriteTag writes a value to a tag on the PLC.
+// The value must be a basic Go type (int, float, etc.) or implement cip.Marshaler.
+func (c *Client) WriteTag(tagName string, value any) error {
+	// Build Path
+	p := cip.NewPath()
+	p.AddSymbolicSegment(tagName)
+
+	// Determine Data Type
+	dataType, err := cip.GoTypeToCIPType(value)
+	if err != nil {
+		return err
+	}
+
+	// Marshaling Data
+	data, err := cip.Marshal(value)
+	if err != nil {
+		return err
+	}
+
+	// Create Request (Write 1 element)
+	// TODO: Support arrays (element count > 1) if value is slice?
+	// For now, assume 1 element.
+	req := cip.NewWriteTagRequest(p, dataType, 1, data)
+
+	// Send Request
+	resp, err := c.session.SendCIPRequest(req)
+	if err != nil {
+		return err
+	}
+
+	if err := resp.Error(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // ReadTagInto reads a tag from the PLC and unmarshals it into dst.
