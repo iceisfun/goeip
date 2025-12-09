@@ -87,6 +87,30 @@ Reads the value of a specific tag from the controller.
 go run ./cmd/read_tag_single -addr 192.168.1.10 -tag MyTag
 ```
 
+### read_tag_single_reconnecting
+
+Demonstrates the `ReconnectingClient` which automatically handles disconnections and reconnections. It reads a tag repeatedly and survives network interruptions.
+
+```bash
+go run ./cmd/read_tag_single_reconnecting -addr 192.168.1.10 -tag MyTag
+```
+
+### read_tag_struct
+
+Demonstrates reading tags directly into Go types. Supported types include `bool`, `int8`, `uint8`, `int16`, `uint16`, `int32`, `uint32`, `int64`, `uint64`, `float32`, `float64`, `timer`, and `custom` (user-defined struct).
+
+```bash
+go run ./cmd/read_tag_struct -addr 192.168.1.10 -tag MyTag -type int32
+```
+
+### read_tag_timer
+
+Reads a specific Rockwell Logix Timer structure (PRE, ACC, EN, TT, DN) from the controller.
+
+```bash
+go run ./cmd/read_tag_timer -addr 192.168.1.10 -tag MyTimer
+```
+
 ### write_tag_single
 
 Writes a value to a specific tag on the controller. You must specify the tag name, the data type, and the value.
@@ -95,7 +119,7 @@ Writes a value to a specific tag on the controller. You must specify the tag nam
 
 - `--addr`: Target Address (default `192.168.1.10:44818`)
 - `--tag`: Tag Name to write.
-- `--type`: Data Type of the tag (e.g., `DINT`, `REAL`, `BOOL`, `STRING`).
+- `--type`: Data Type of the tag (`BOOL`, `SINT`, `INT`, `DINT`, `LINT`, `USINT`, `UINT`, `UDINT`, `ULINT`, `REAL`, `LREAL`, `STRING`).
 - `--value`: Value to write.
 
 **Example:**
