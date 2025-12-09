@@ -31,6 +31,7 @@
 
 Detailed documentation for specific components can be found in the `docs/` directory:
 
+- **Start Here**: [Basic Usage](docs/basics.md) - A beginner's guide to Connecting, Reading, and Writing.
 - [Connection Manager](docs/connection_manager.md): Details on Forward_Open, Large_Forward_Open, and Connection Lifecycle.
 - [Assembly Object](docs/assembly_object.md): Usage of Input, Output, and Configuration Assemblies.
 - [Implicit Messaging](docs/implicit_messaging.md): Architecture of the UDP I/O runtime and Scheduler.
