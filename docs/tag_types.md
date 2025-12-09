@@ -2,6 +2,8 @@
 
 When reading or writing tags using `goeip`, it is important to understand how CIP data types map to Go types. The library defines specific types in the `pkg/cip` package to represent these values.
 
+![Barn Owl understanding CIP tag types](plcowl_types.jpg)
+
 ## Elementary Data Types
 
 The following table lists the supported elementary CIP data types and their corresponding Go types in `goeip`.
