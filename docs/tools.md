@@ -1,0 +1,86 @@
+# Tools & Usage
+
+`goeip` includes two command-line tools to demonstrate and verify the functionality of the library.
+
+## Adapter (Server)
+
+The `adapter` tool simulates an EtherNet/IP target device. It listens for incoming connections and supports configurable Input and Output assemblies.
+
+### Command Line Arguments
+
+- `--addr`: TCP address to listen on (default `:44818`).
+- `--udp-addr`: UDP address to listen on for I/O (default `:2222`).
+- `--input-assembly`: ID of the Input Assembly (e.g., `100`). Can optionally specify a file to load data from (e.g., `100=data.bin`).
+- `--output-assembly`: ID of the Output Assembly (e.g., `150`).
+
+### Example
+
+```bash
+# Start Adapter with Input Instance 100 and Output Instance 150
+./adapter --input-assembly 100 --output-assembly 150
+```
+
+## Scanner (Client)
+
+The `scanner` tool simulates an EtherNet/IP originator. It connects to a target, establishes an I/O connection using `Forward_Open`, and exchanges cyclic data.
+
+### Command Line Arguments
+
+- `--addr`: Target TCP address (default `127.0.0.1:44818`).
+- `--input-assembly`: Target's Input Assembly ID (T->O) (default `100`).
+- `--output-assembly`: Target's Output Assembly ID (O->T) (default `150`).
+- `--rpi`: Requested Packet Interval (default `100ms`).
+
+### Example
+
+```bash
+# Connect to local adapter with 20ms RPI
+./scanner --addr 127.0.0.1:44818 --rpi 20ms
+```
+
+## Verification Flow
+
+1. **Start the Adapter**:
+   ```bash
+   ./adapter
+   ```
+   You should see logs indicating the server is listening.
+
+2. **Start the Scanner**:
+   ```bash
+   ./scanner
+   ```
+   You should see:
+   - "Forward_Open Successful!"
+   - Logs indicating cyclic packet transmission.
+
+3. **Observe Traffic**:
+   You can use Wireshark to capture traffic on port 2222 (UDP) and 44818 (TCP) to verify the packet formats and timing.
+
+## Explicit Messaging Tools
+
+In addition to the implicit I/O tools, `goeip` provides tools for explicit messaging and discovery.
+
+### list_identity
+
+Sends a `ListIdentity` command to the target to retrieve device information (Vendor, Product Type, Product Code, Version, Status, Serial Number, Product Name).
+
+```bash
+go run ./cmd/list_identity -addr 192.168.1.10
+```
+
+### list_tags
+
+Enumerates all tags on a Rockwell Logix controller using the Symbol Object (Class 0x6B). It retrieves the name and type of each tag.
+
+```bash
+go run ./cmd/list_tags -addr 192.168.1.10
+```
+
+### read_tag_single
+
+Reads the value of a specific tag from the controller.
+
+```bash
+go run ./cmd/read_tag_single -addr 192.168.1.10 -tag MyTag
+```
