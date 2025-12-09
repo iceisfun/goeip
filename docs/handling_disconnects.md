@@ -4,6 +4,8 @@ The standard `goeip.Client` relies on a persistent TCP connection to the PLC. If
 
 For long-running applications that need to survive network outages, you should use the `ReconnectingClient` wrapper or implement your own reconnection logic.
 
+![Barn Owl keeping things connected](plcowl_reconnecting.png)
+
 ## Using ReconnectingClient
 
 `goeip` provides a `ReconnectingClient` in the `pkg/client` package. This wrapper automatically detects network errors and attempts to establish a new session transparently.
