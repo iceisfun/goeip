@@ -5,7 +5,7 @@ emits events whenever fresh data is available. The monitor builds on the
 existing `client.Client` and keeps the polling logic, rate control, and change
 tracking in one place, making it easier to implement state driven scanners.
 
-![Barn owl keeping watch via TagMonitor](plcowl_tagmonitor.png)
+![Barn owl keeping watch via TagMonitor](plcowl_tagmonitor.jpg)
 
 ## Creating a Monitor
 
