@@ -2,6 +2,8 @@
 
 This document describes the implementation of Rockwell Logix Timer Structures (TON/TOF/RTO) in `goeip`.
 
+![Barn Owl understanding Logix Timer Structure](plcowl_timer.jpg)
+
 ## Overview
 
 Rockwell Logix5000 platforms use a specific memory layout for Timer structures. This library provides a `Timer` struct and a decoder to handle this layout.
