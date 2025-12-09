@@ -2,6 +2,8 @@
 
 `goeip` includes two command-line tools to demonstrate and verify the functionality of the library.
 
+![Barn Owl understanding tools](plcowl_tools.jpg)
+
 ## Adapter (Server)
 
 The `adapter` tool simulates an EtherNet/IP target device. It listens for incoming connections and supports configurable Input and Output assemblies.
