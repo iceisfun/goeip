@@ -84,3 +84,27 @@ Reads the value of a specific tag from the controller.
 ```bash
 go run ./cmd/read_tag_single -addr 192.168.1.10 -tag MyTag
 ```
+
+### write_tag_single
+
+Writes a value to a specific tag on the controller. You must specify the tag name, the data type, and the value.
+
+**Arguments:**
+
+- `--addr`: Target Address (default `192.168.1.10:44818`)
+- `--tag`: Tag Name to write.
+- `--type`: Data Type of the tag (e.g., `DINT`, `REAL`, `BOOL`, `STRING`).
+- `--value`: Value to write.
+
+**Example:**
+
+```bash
+# Write 12345 to DINT tag 'MyTag'
+go run ./cmd/write_tag_single -addr 192.168.1.10 -tag MyTag -type DINT -value 12345
+
+# Write 3.14 to REAL tag 'MyFloat'
+go run ./cmd/write_tag_single -addr 192.168.1.10 -tag MyFloat -type REAL -value 3.14
+
+# Write "Hello" to STRING tag 'MyString'
+go run ./cmd/write_tag_single -addr 192.168.1.10 -tag MyString -type STRING -value "Hello"
+```

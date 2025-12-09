@@ -25,6 +25,7 @@
   - `list_identity`: Enumerates the Identity Object of a target.
   - `list_tags`: Lists all tags (symbols) on a Logix controller.
   - `read_tag_single`: Reads a single tag value from a target.
+  - `write_tag_single`: Writes a single tag value to a target.
 
 ## Documentation
 
