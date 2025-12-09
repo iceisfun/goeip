@@ -2,7 +2,7 @@
 
 `goeip` supports reading tags directly into Go structs and basic types. For custom structs that require specific decoding logic (e.g., handling padding, bit-packed fields, or non-standard layouts), you can implement the `Unmarshaler` and `Marshaler` interfaces.
 
-![Barn Owl understanding custom types](plcowl_customtypes.jpg)
+![Barn Owl understanding custom types](plcowl_custom_types.jpg)
 
 ## Interfaces
 
