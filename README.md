@@ -37,6 +37,9 @@ Detailed documentation for specific components can be found in the `docs/` direc
 - [Tag Types](docs/tag_types.md): Mapping of CIP data types to Go types.
 - [Tools & Usage](docs/tools.md): Guides for using the `scanner` and `adapter` CLI tools.
 - [Tag Monitor](docs/tag_monitor.md): Poll tags on schedules and build state-driven applications.
+- [Custom Types](docs/custom_types.md): Implementing Marshaler/Unmarshaler for custom structs.
+- [Handling Disconnects](docs/handling_disconnects.md): Using ReconnectingClient and best practices.
+- [Logix Timer Structure](docs/timer_structure.md): Details on Timer (TON/TOF/RTO) support.
 
 ## Quick Start
 
