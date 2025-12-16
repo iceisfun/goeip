@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/iceisfun/goeip/internal"
 	"github.com/iceisfun/goeip/pkg/cip"
@@ -21,7 +22,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
 		flag.PrintDefaults()
 		fmt.Fprintf(os.Stderr, "\nValid types:\n")
-		fmt.Fprintf(os.Stderr, "  bool, int8, uint8, int16, uint16, int32, uint32, int64, uint64, float32, float64, timer, custom\n")
+		fmt.Fprintf(os.Stderr, "  bool, int8, uint8, int16, uint16, int32, uint32, int64, uint64, float32, float64, timer, counter, custom\n")
 	}
 
 	flag.Parse()
@@ -39,7 +40,7 @@ func main() {
 	logger.Infof("Reading tag '%s' as %s...", *tagName, *tagType)
 
 	var readErr error
-	switch *tagType {
+	switch strings.ToLower(*tagType) {
 	case "bool":
 		var val bool
 		readErr = c.ReadTagInto(*tagName, &val)
@@ -111,6 +112,12 @@ func main() {
 		readErr = c.ReadTagInto(*tagName, &t)
 		if readErr == nil {
 			logger.Infof("Timer: PRE=%d, ACC=%d, EN=%v, TT=%v, DN=%v", t.PRE, t.ACC, t.EN, t.TT, t.DN)
+		}
+	case "counter":
+		var cnt cip.Counter
+		readErr = c.ReadTagInto(*tagName, &cnt)
+		if readErr == nil {
+			logger.Infof("Counter: PRE=%d, ACC=%d, CU=%v, CD=%v, DN=%v, OV=%v, UN=%v", cnt.PRE, cnt.ACC, cnt.CU, cnt.CD, cnt.DN, cnt.OV, cnt.UN)
 		}
 	case "custom":
 		var cst CustomStruct
