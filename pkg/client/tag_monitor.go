@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -248,12 +249,13 @@ type Refreshable interface {
 type TagHandler func(snapshot TagSnapshot)
 
 type tagSubscription struct {
-	id          int64
-	name        string
-	frequency   time.Duration
-	handler     TagHandler
-	refreshable Refreshable
-	immediate   bool
+	id           int64
+	name         string
+	frequency    time.Duration
+	readVariance time.Duration
+	handler      TagHandler
+	refreshable  Refreshable
+	immediate    bool
 
 	monitor *TagMonitor
 
@@ -264,15 +266,16 @@ type tagSubscription struct {
 
 func newTagSubscription(id int64, name string, cfg tagConfig, monitor *TagMonitor) *tagSubscription {
 	return &tagSubscription{
-		id:          id,
-		name:        name,
-		frequency:   cfg.frequency,
-		handler:     cfg.handler,
-		refreshable: cfg.refreshable,
-		immediate:   cfg.immediate,
-		monitor:     monitor,
-		stopCh:      make(chan struct{}),
-		doneCh:      make(chan struct{}),
+		id:           id,
+		name:         name,
+		frequency:    cfg.frequency,
+		readVariance: cfg.readVariance,
+		handler:      cfg.handler,
+		refreshable:  cfg.refreshable,
+		immediate:    cfg.immediate,
+		monitor:      monitor,
+		stopCh:       make(chan struct{}),
+		doneCh:       make(chan struct{}),
 	}
 }
 
@@ -283,12 +286,19 @@ func (s *tagSubscription) run() {
 		s.poll()
 	}
 
-	ticker := time.NewTicker(s.frequency)
-	defer ticker.Stop()
-
 	for {
+		delay := s.frequency
+		if s.readVariance > 0 {
+			// Add random variance in range [-readVariance, +readVariance]
+			variance := time.Duration(rand.Int63n(int64(s.readVariance)*2+1)) - s.readVariance
+			delay += variance
+			if delay < 0 {
+				delay = 0
+			}
+		}
+
 		select {
-		case <-ticker.C:
+		case <-time.After(delay):
 			s.poll()
 		case <-s.stopCh:
 			return
@@ -356,10 +366,11 @@ func (s *tagSubscription) poll() {
 type TagOption func(*tagConfig) error
 
 type tagConfig struct {
-	frequency   time.Duration
-	handler     TagHandler
-	refreshable Refreshable
-	immediate   bool
+	frequency    time.Duration
+	readVariance time.Duration
+	handler      TagHandler
+	refreshable  Refreshable
+	immediate    bool
 }
 
 func defaultTagConfig() *tagConfig {
@@ -376,6 +387,20 @@ func WithFrequency(freq time.Duration) TagOption {
 			return fmt.Errorf("frequency must be positive")
 		}
 		cfg.frequency = freq
+		return nil
+	}
+}
+
+// WithReadVariance adds random timing variance to each poll cycle.
+// The actual delay will be frequency +/- a random value up to variance.
+// This helps spread out reads when multiple subscriptions would otherwise
+// poll at the same time, reducing load on the PLC.
+func WithReadVariance(variance time.Duration) TagOption {
+	return func(cfg *tagConfig) error {
+		if variance < 0 {
+			return fmt.Errorf("read variance cannot be negative")
+		}
+		cfg.readVariance = variance
 		return nil
 	}
 }
