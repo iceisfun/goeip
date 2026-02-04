@@ -40,6 +40,9 @@ for evt := range monitor.Wait() {
 `AddTag` registers a new polling routine. Options configure the behaviour:
 
 - `WithFrequency(d time.Duration)` – set the poll interval (default 500 ms).
+- `WithReadVariance(d time.Duration)` – add random timing variance (±d) to each
+  poll cycle. This spreads out reads when multiple subscriptions would otherwise
+  hit the PLC simultaneously, reducing contention.
 - `WithRefreshable(r Refreshable)` – update user state and only emit events when
   `Refresh` reports that the state changed.
 - `WithHandler(fn TagHandler)` – invoke a callback every time the tag is read
@@ -72,6 +75,16 @@ func (p *Position) Refresh(snapshot client.TagSnapshot) (bool, error) {
 
 motor := &Position{}
 monitor.AddTag("Motor_Pos", client.WithFrequency(50*time.Millisecond), client.WithRefreshable(motor))
+```
+
+When polling many tags at similar frequencies, use `WithReadVariance` to prevent
+all reads from hitting the PLC at the same instant:
+
+```go
+// Poll every 100ms with ±20ms variance (actual interval: 80-120ms)
+monitor.AddTag("Tag1", client.WithFrequency(100*time.Millisecond), client.WithReadVariance(20*time.Millisecond))
+monitor.AddTag("Tag2", client.WithFrequency(100*time.Millisecond), client.WithReadVariance(20*time.Millisecond))
+monitor.AddTag("Tag3", client.WithFrequency(100*time.Millisecond), client.WithReadVariance(20*time.Millisecond))
 ```
 
 `Refreshable` implementations are ideal for state-based applications. They

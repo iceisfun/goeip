@@ -12,6 +12,7 @@ import (
 func main() {
 	address := flag.String("addr", "192.168.1.10:44818", "PLC Address (IP:Port)")
 	tagName := flag.String("tag", "TestTag", "Tag Name to read")
+	count := flag.Uint("count", 1, "Number of elements to read (for arrays)")
 	flag.Parse()
 
 	logger := internal.NewConsoleLogger()
@@ -24,8 +25,8 @@ func main() {
 	}
 	defer c.Close()
 
-	logger.Infof("Reading tag '%s'...", *tagName)
-	data, err := c.ReadTag(*tagName)
+	logger.Infof("Reading tag '%s' (%d elements)...", *tagName, *count)
+	data, err := c.ReadTagElements(*tagName, uint16(*count))
 	if err != nil {
 		logger.Errorf("Failed to read tag: %v", err)
 		os.Exit(1)

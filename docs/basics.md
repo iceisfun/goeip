@@ -70,6 +70,23 @@ var myBool bool
 err := c.ReadTagInto("MyBool", &myBool)
 ```
 
+### Reading Arrays
+
+Use `ReadTagElements` or `ReadTagElementsInto` to read multiple elements from an array tag.
+
+```go
+// Reading raw bytes (21 DINT elements = 84 bytes + 2 byte type header)
+data, err := c.ReadTagElements("MyDINTArray", 21)
+
+// Reading into a Go array
+var alarms [21]int32
+err := c.ReadTagElementsInto("MyDINTArray", 21, &alarms)
+
+// Reading a single element by index still works
+var element int32
+err := c.ReadTagInto("MyDINTArray[5]", &element)
+```
+
 ### Reading Structures
 
 You can also read entire structures if you define a compatible Go struct.

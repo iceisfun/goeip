@@ -81,10 +81,20 @@ go run ./cmd/list_tags -addr 192.168.1.10
 
 ### read_tag_single
 
-Reads the value of a specific tag from the controller.
+Reads the value of a specific tag from the controller. Supports reading arrays by specifying an element count.
+
+**Arguments:**
+
+- `--addr`: Target Address (default `192.168.1.10:44818`)
+- `--tag`: Tag Name to read.
+- `--count`: Number of elements to read (default `1`, use higher values for arrays).
 
 ```bash
+# Read a single tag
 go run ./cmd/read_tag_single -addr 192.168.1.10 -tag MyTag
+
+# Read a DINT[21] array
+go run ./cmd/read_tag_single -addr 192.168.1.10 -tag MyDINTArray -count 21
 ```
 
 ### read_tag_single_reconnecting

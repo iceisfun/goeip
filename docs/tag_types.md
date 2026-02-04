@@ -38,10 +38,26 @@ String handling in CIP can vary. The standard types are:
 
 ## Constructed Data Types
 
-For arrays and structures, `goeip` typically handles them as byte slices (`[]byte`) which need to be parsed based on the specific structure definition.
+### Arrays
 
-- **Arrays**: Sequence of elements of the same type.
-- **Structures**: Sequence of members of potentially different types.
+Arrays are sequences of elements of the same type. Use `ReadTagElements` or `ReadTagElementsInto` to read multiple elements at once.
+
+```go
+// Read 10 DINT elements into a Go array
+var values [10]int32
+err := c.ReadTagElementsInto("MyDINTArray", 10, &values)
+
+// Read raw bytes (includes 2-byte type header)
+data, err := c.ReadTagElements("MyDINTArray", 10)
+// data[0:2] = type code (0xC4 0x00 for DINT)
+// data[2:] = 40 bytes of DINT data (10 elements × 4 bytes)
+```
+
+Array responses include the base type code (e.g., `0x00C4` for DINT). The array bit (`0x8000`) is used internally but the response contains just the element type.
+
+### Structures
+
+Structures are sequences of members of potentially different types. Define a matching Go struct to unmarshal them.
 
 ## Usage in Code
 

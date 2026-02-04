@@ -43,12 +43,24 @@ func (c *Client) Close() error {
 
 // ReadTag reads a tag from the PLC
 func (c *Client) ReadTag(tagName string) ([]byte, error) {
+	return c.ReadTagElements(tagName, 1)
+}
+
+// ReadTagElements reads multiple elements of a tag from the PLC.
+// For arrays, count specifies how many elements to read starting from element 0.
+// For single values, use count=1.
+// Returns raw bytes including the type code (first 2 bytes).
+func (c *Client) ReadTagElements(tagName string, count uint16) ([]byte, error) {
+	if count == 0 {
+		return nil, fmt.Errorf("element count must be at least 1")
+	}
+
 	// Build Path
 	p := cip.NewPath()
 	p.AddSymbolicSegment(tagName)
 
-	// Create Request (Read 1 element)
-	req := cip.NewReadTagRequest(p, 1)
+	// Create Request
+	req := cip.NewReadTagRequest(p, count)
 
 	// Send Request
 	resp, err := c.session.SendCIPRequest(req)
@@ -63,8 +75,6 @@ func (c *Client) ReadTag(tagName string) ([]byte, error) {
 	// Response Data for Read Tag:
 	// Type (UINT)
 	// Data (...)
-	// We return the raw data including type for now, or we could parse it.
-	// Let's return the raw data payload (excluding the type? No, type is important).
 	return resp.ResponseData, nil
 }
 
@@ -108,13 +118,19 @@ func (c *Client) WriteTag(tagName string, value any) error {
 // ReadTagInto reads a tag from the PLC and unmarshals it into dst.
 // dst must be a pointer to a type that can be unmarshaled (basic type, struct, or Unmarshaler).
 func (c *Client) ReadTagInto(tagName string, dst any) error {
-	data, err := c.ReadTag(tagName)
+	return c.ReadTagElementsInto(tagName, 1, dst)
+}
+
+// ReadTagElementsInto reads multiple elements of a tag and unmarshals them into dst.
+// dst must be a pointer to an array or slice that can hold count elements.
+// Example: var dints [10]int32; client.ReadTagElementsInto("MyDINTArray", 10, &dints)
+func (c *Client) ReadTagElementsInto(tagName string, count uint16, dst any) error {
+	data, err := c.ReadTagElements(tagName, count)
 	if err != nil {
 		return err
 	}
 
-	// The ReadTag response includes the data type code (UINT) at the beginning.
-	// We need to skip it to get to the actual data.
+	// The response includes the data type code (UINT) at the beginning.
 	// Response format: [Type:UINT] [Data...]
 	if len(data) < 2 {
 		return fmt.Errorf("response too short to contain type code")
