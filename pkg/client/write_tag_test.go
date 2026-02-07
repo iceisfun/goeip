@@ -75,7 +75,7 @@ func TestClient_WriteTag(t *testing.T) {
 		conn.Write(cpf)
 	}()
 
-	client, err := NewClient(l.Addr().String(), &MockLogger{})
+	client, err := Connect(l.Addr().String(), &MockLogger{})
 	if err != nil {
 		t.Fatalf("NewClient() error = %v", err)
 	}

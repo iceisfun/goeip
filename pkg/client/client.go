@@ -1,47 +1,106 @@
 package client
 
 import (
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/iceisfun/goeip/internal"
 	"github.com/iceisfun/goeip/pkg/cip"
 	"github.com/iceisfun/goeip/pkg/session"
-	"github.com/iceisfun/goeip/pkg/transport"
 )
 
-// Client is a high-level EIP client
+// cipError wraps CIP-level errors that should not be retried.
+type cipError struct{ err error }
+
+func (e *cipError) Error() string { return e.err.Error() }
+func (e *cipError) Unwrap() error { return e.err }
+
+// Client is a high-level EIP client that uses a Transport to manage sessions.
 type Client struct {
-	session *session.Session
-	logger  internal.Logger
+	transport  Transport
+	logger     internal.Logger
+	retries    int
+	retryDelay time.Duration
 }
 
-// NewClient creates a new client
-func NewClient(address string, logger internal.Logger) (*Client, error) {
-	t, err := transport.NewTCPTransport(address)
+// NewClient creates a new client backed by the given transport.
+func NewClient(t Transport, opts ...Option) *Client {
+	c := &Client{
+		transport:  t,
+		logger:     internal.NopLogger(),
+		retries:    0,
+		retryDelay: 1 * time.Second,
+	}
+	for _, opt := range opts {
+		opt(c)
+	}
+	return c
+}
+
+// Connect is a convenience constructor that creates a direct (non-reconnecting)
+// client. It connects immediately and returns an error on failure.
+func Connect(address string, logger internal.Logger) (*Client, error) {
+	if logger == nil {
+		logger = internal.NopLogger()
+	}
+	t, err := NewDirectTransport(address, logger)
 	if err != nil {
 		return nil, err
 	}
-
-	s := session.NewSession(t, logger)
-	if err := s.Register(); err != nil {
-		t.Close()
-		return nil, err
-	}
-
-	return &Client{session: s, logger: logger}, nil
+	return NewClient(t, WithLogger(logger)), nil
 }
 
-// Close closes the client connection
-// Close closes the client connection
+// Close closes the client connection.
 func (c *Client) Close() error {
-	if err := c.session.Unregister(); err != nil {
-		// Log error but continue to close transport
-		c.logger.Errorf("Failed to unregister session: %v", err)
-	}
-	return c.session.Close()
+	return c.transport.Close()
 }
 
-// ReadTag reads a tag from the PLC
+// do executes op with retry logic. On transport errors it resets the transport
+// and retries. CIP-level errors (wrapped in cipError) are not retried.
+func (c *Client) do(op func(*session.Session) error) error {
+	for i := 0; c.retries < 0 || i <= c.retries; i++ {
+		sess, err := c.transport.Session()
+		if err != nil {
+			if c.retries == 0 {
+				return err
+			}
+			c.logger.Warnf("Session unavailable (attempt %d): %v", i+1, err)
+			if c.retries < 0 || i < c.retries {
+				time.Sleep(c.retryDelay)
+			}
+			continue
+		}
+
+		err = op(sess)
+		if err == nil {
+			return nil
+		}
+
+		// CIP errors are not retryable
+		var ce *cipError
+		if errors.As(err, &ce) {
+			return ce.err
+		}
+
+		// Transport error: reset and retry
+		c.transport.Reset(sess)
+		c.logger.Warnf("Operation failed (attempt %d): %v", i+1, err)
+
+		if c.retries < 0 || i < c.retries {
+			time.Sleep(c.retryDelay)
+		}
+
+		// Prevent integer overflow for infinite retries
+		if i == 2147483647 {
+			i = 0
+		}
+	}
+
+	return fmt.Errorf("operation failed after %d retries", c.retries+1)
+}
+
+// ReadTag reads a tag from the PLC.
 func (c *Client) ReadTag(tagName string) ([]byte, error) {
 	return c.ReadTagElements(tagName, 1)
 }
@@ -55,64 +114,54 @@ func (c *Client) ReadTagElements(tagName string, count uint16) ([]byte, error) {
 		return nil, fmt.Errorf("element count must be at least 1")
 	}
 
-	// Build Path
 	p := cip.NewPath()
 	p.AddSymbolicSegment(tagName)
-
-	// Create Request
 	req := cip.NewReadTagRequest(p, count)
 
-	// Send Request
-	resp, err := c.session.SendCIPRequest(req)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := resp.Error(); err != nil {
-		return nil, err
-	}
-
-	// Response Data for Read Tag:
-	// Type (UINT)
-	// Data (...)
-	return resp.ResponseData, nil
+	var result []byte
+	err := c.do(func(sess *session.Session) error {
+		resp, err := sess.SendCIPRequest(req)
+		if err != nil {
+			return err
+		}
+		if err := resp.Error(); err != nil {
+			return &cipError{err}
+		}
+		result = resp.ResponseData
+		return nil
+	})
+	return result, err
 }
 
 // WriteTag writes a value to a tag on the PLC.
 // The value must be a basic Go type (int, float, etc.) or implement cip.Marshaler.
 func (c *Client) WriteTag(tagName string, value any) error {
-	// Build Path
+	// CIP encoding done outside the retry loop to fail-fast on invalid input
 	p := cip.NewPath()
 	p.AddSymbolicSegment(tagName)
 
-	// Determine Data Type
 	dataType, err := cip.GoTypeToCIPType(value)
 	if err != nil {
 		return err
 	}
 
-	// Marshaling Data
 	data, err := cip.Marshal(value)
 	if err != nil {
 		return err
 	}
 
-	// Create Request (Write 1 element)
-	// TODO: Support arrays (element count > 1) if value is slice?
-	// For now, assume 1 element.
 	req := cip.NewWriteTagRequest(p, dataType, 1, data)
 
-	// Send Request
-	resp, err := c.session.SendCIPRequest(req)
-	if err != nil {
-		return err
-	}
-
-	if err := resp.Error(); err != nil {
-		return err
-	}
-
-	return nil
+	return c.do(func(sess *session.Session) error {
+		resp, err := sess.SendCIPRequest(req)
+		if err != nil {
+			return err
+		}
+		if err := resp.Error(); err != nil {
+			return &cipError{err}
+		}
+		return nil
+	})
 }
 
 // ReadTagInto reads a tag from the PLC and unmarshals it into dst.
@@ -123,20 +172,16 @@ func (c *Client) ReadTagInto(tagName string, dst any) error {
 
 // ReadTagElementsInto reads multiple elements of a tag and unmarshals them into dst.
 // dst must be a pointer to an array or slice that can hold count elements.
-// Example: var dints [10]int32; client.ReadTagElementsInto("MyDINTArray", 10, &dints)
 func (c *Client) ReadTagElementsInto(tagName string, count uint16, dst any) error {
 	data, err := c.ReadTagElements(tagName, count)
 	if err != nil {
 		return err
 	}
 
-	// The response includes the data type code (UINT) at the beginning.
-	// Response format: [Type:UINT] [Data...]
 	if len(data) < 2 {
 		return fmt.Errorf("response too short to contain type code")
 	}
 
-	// Skip the first 2 bytes (Type)
 	return cip.Unmarshal(data[2:], dst)
 }
 
@@ -147,19 +192,9 @@ func (c *Client) ReadTimer(tagName string) (*cip.Timer, error) {
 		return nil, err
 	}
 
-	// The ReadTag response includes the data type code (UINT) at the beginning.
-	// We need to skip it to get to the actual Timer structure data.
-	// Response format: [Type:UINT] [Data...]
 	if len(data) < 2 {
 		return nil, fmt.Errorf("response too short to contain type code")
 	}
-
-	// Check if the type is a structure (0x02A0) or just raw bytes?
-	// Actually, for a TIMER, it might return the raw bytes of the structure.
-	// The type code for a structure is typically 0x02A0 (Structure).
-	// But let's just skip the first 2 bytes (Type) and pass the rest to DecodeTimer.
-	// Note: DecodeTimer expects 14 bytes.
-	// So we need at least 2 + 14 = 16 bytes.
 
 	return cip.DecodeTimer(data[2:])
 }

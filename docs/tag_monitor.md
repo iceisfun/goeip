@@ -11,7 +11,7 @@ tracking in one place, making it easier to implement state driven scanners.
 
 ```go
 logger := internal.NewConsoleLogger()
-client, _ := client.NewClient("192.168.1.10:44818", logger)
+client, _ := client.Connect("192.168.1.10:44818", logger)
 monitor, _ := client.NewTagMonitor(client)
 defer monitor.Close()
 ```

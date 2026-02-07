@@ -25,7 +25,7 @@ func main() {
 	logger := internal.NewConsoleLogger()
 
 	// Create client
-	c, err := client.NewClient(*ip, logger)
+	c, err := client.Connect(*ip, logger)
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}

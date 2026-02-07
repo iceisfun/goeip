@@ -49,9 +49,9 @@ func TestNewClient(t *testing.T) {
 		conn.Write(resp)
 	}()
 
-	client, err := NewClient(l.Addr().String(), &MockLogger{})
+	client, err := Connect(l.Addr().String(), &MockLogger{})
 	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
+		t.Fatalf("Connect() error = %v", err)
 	}
 	defer client.Close()
 }
@@ -139,9 +139,9 @@ func TestClient_ReadTag(t *testing.T) {
 		conn.Write(cpf)
 	}()
 
-	client, err := NewClient(l.Addr().String(), &MockLogger{})
+	client, err := Connect(l.Addr().String(), &MockLogger{})
 	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
+		t.Fatalf("Connect() error = %v", err)
 	}
 	defer client.Close()
 
@@ -237,9 +237,9 @@ func TestClient_ReadTagInto(t *testing.T) {
 		conn.Write(cpf)
 	}()
 
-	client, err := NewClient(l.Addr().String(), &MockLogger{})
+	client, err := Connect(l.Addr().String(), &MockLogger{})
 	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
+		t.Fatalf("Connect() error = %v", err)
 	}
 	defer client.Close()
 
@@ -326,9 +326,9 @@ func TestClient_ReadTimer(t *testing.T) {
 		conn.Write(cpf)
 	}()
 
-	client, err := NewClient(l.Addr().String(), &MockLogger{})
+	client, err := Connect(l.Addr().String(), &MockLogger{})
 	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
+		t.Fatalf("Connect() error = %v", err)
 	}
 	defer client.Close()
 

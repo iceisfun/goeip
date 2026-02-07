@@ -78,7 +78,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	c, err := client.NewClient(*address, logger)
+	c, err := client.Connect(*address, logger)
 	if err != nil {
 		logger.Errorf("Failed to connect: %v", err)
 		os.Exit(1)

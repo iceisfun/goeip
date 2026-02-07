@@ -25,7 +25,7 @@ func main() {
 
     // 2. Connect to the PLC
     // Replace with your PLC's IP address
-    c, err := client.NewClient("192.168.1.10", logger)
+    c, err := client.Connect("192.168.1.10", logger)
     if err != nil {
         log.Fatalf("Failed to connect: %v", err)
     }
