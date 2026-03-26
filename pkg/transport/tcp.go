@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/iceisfun/goeip/pkg/eip"
@@ -20,6 +21,7 @@ type Transport interface {
 // TCPTransport implements Transport using TCP
 type TCPTransport struct {
 	conn net.Conn
+	wmu  sync.Mutex // protects concurrent writes
 }
 
 // NewTCPTransport creates a new TCP transport
@@ -45,6 +47,9 @@ func (t *TCPTransport) Send(cmd eip.Command, data []byte, sessionHandle eip.Sess
 		SenderContext: [8]byte{}, // TODO: Allow setting context?
 		Options:       0,
 	}
+
+	t.wmu.Lock()
+	defer t.wmu.Unlock()
 
 	// Write Header
 	if err := header.Encode(t.conn); err != nil {

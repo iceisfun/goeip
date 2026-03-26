@@ -2,6 +2,7 @@ package session
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/iceisfun/goeip/internal"
 	"github.com/iceisfun/goeip/pkg/cip"
@@ -15,6 +16,7 @@ type Session struct {
 	transport     transport.Transport
 	sessionHandle eip.SessionHandle
 	logger        internal.Logger
+	mu            sync.Mutex // protects sessionHandle
 }
 
 // NewSession creates a new session
@@ -50,8 +52,10 @@ func (s *Session) Register() error {
 		return fmt.Errorf("register session failed with status: 0x%08X", header.Status)
 	}
 
+	s.mu.Lock()
 	s.sessionHandle = header.SessionHandle
-	s.logger.Infof("Session registered. Handle: 0x%08X", s.sessionHandle)
+	s.mu.Unlock()
+	s.logger.Infof("Session registered. Handle: 0x%08X", header.SessionHandle)
 	s.logger.Debugf("RegisterSession Response Data:\n%s", utils.HexDump(respData))
 
 	return nil
@@ -59,8 +63,11 @@ func (s *Session) Register() error {
 
 // Unregister unregisters the session
 func (s *Session) Unregister() error {
+	s.mu.Lock()
+	handle := s.sessionHandle
+	s.mu.Unlock()
 	s.logger.Infof("Sending UnregisterSession command")
-	return s.transport.Send(eip.CommandUnregisterSession, nil, s.sessionHandle)
+	return s.transport.Send(eip.CommandUnregisterSession, nil, handle)
 }
 
 // Close closes the underlying transport
@@ -90,8 +97,11 @@ func (s *Session) SendRRData(request []byte) ([]byte, error) {
 	copy(rrData[6:], cpfData)
 
 	// Send CommandSendRRData
+	s.mu.Lock()
+	handle := s.sessionHandle
+	s.mu.Unlock()
 	s.logger.Debugf("Sending RRData (len=%d)", len(rrData))
-	if err := s.transport.Send(eip.CommandSendRRData, rrData, s.sessionHandle); err != nil {
+	if err := s.transport.Send(eip.CommandSendRRData, rrData, handle); err != nil {
 		return nil, err
 	}
 
