@@ -37,7 +37,7 @@ func GoTypeToCIPType(v any) (DataType, error) {
 		return TypeSINT, nil
 	case int16:
 		return TypeINT, nil
-	case int32, int:
+	case int32:
 		return TypeDINT, nil
 	case int64:
 		return TypeLINT, nil
@@ -46,7 +46,7 @@ func GoTypeToCIPType(v any) (DataType, error) {
 	case uint16:
 		return TypeUINT, nil // or WORD?
 	case uint32:
-		return TypeUDINT, nil // or DWORD?
+		return TypeUDINT, nil
 	case uint64:
 		return TypeULINT, nil // or LWORD?
 	case float32:

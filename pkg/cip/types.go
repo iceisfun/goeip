@@ -63,8 +63,8 @@ const (
 	ClassPositionSensor UINT = 0x23
 	ClassPositionCtrl   UINT = 0x24
 	ClassACDrive        UINT = 0x2A
-	ClassMotorOverload  UINT = 0x29
-	ClassControlNet     UINT = 0x29 // Duplicate? Check spec if needed
+	ClassMotorOverload  UINT = 0x2C
+	ClassControlNet     UINT = 0xF0
 	ClassEthernetLink   UINT = 0xF6
 	ClassTCPIPInterface UINT = 0xF5
 )
@@ -137,6 +137,9 @@ type Error struct {
 }
 
 func (e Error) Error() string {
+	if len(e.ExtStatus) > 0 {
+		return fmt.Sprintf("CIP Error: Status=0x%02X ExtStatus=%04X", e.Status, e.ExtStatus)
+	}
 	return fmt.Sprintf("CIP Error: Status=0x%02X", e.Status)
 }
 
