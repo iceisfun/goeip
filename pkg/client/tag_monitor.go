@@ -158,12 +158,12 @@ func (m *TagMonitor) AddTag(name string, opts ...TagOption) (*TagSubscription, e
 	id := m.nextID
 	sub := newTagSubscription(id, name, *cfg, m)
 	m.subs[id] = sub
+	m.wg.Add(1)
 	m.mu.Unlock()
 
-	m.wg.Add(1)
 	go func() {
+		defer m.wg.Done()
 		sub.run()
-		m.wg.Done()
 	}()
 
 	return &TagSubscription{monitor: m, id: id}, nil
@@ -297,12 +297,15 @@ func (s *tagSubscription) run() {
 			}
 		}
 
+		timer := time.NewTimer(delay)
 		select {
-		case <-time.After(delay):
+		case <-timer.C:
 			s.poll()
 		case <-s.stopCh:
+			timer.Stop()
 			return
 		case <-s.monitor.stopCh:
+			timer.Stop()
 			return
 		}
 	}
