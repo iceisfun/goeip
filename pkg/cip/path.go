@@ -134,28 +134,39 @@ func (p *Path) AddSymbolicSegment(symbol string) {
 
 // AddPortSegment adds a Port segment
 func (p *Path) AddPortSegment(port UINT, linkAddress []byte) {
-	// Simple port segment: 000xxxxx where xxxxx is port number if < 15
-	// If port >= 15, then 00001111 followed by extended port
-	// For now, assume port < 15 and link address is simple
+	segStart := len(*p)
+
+	var b byte
 	if port < 15 {
-		b := SegmentTypePort | byte(port)
-		if len(linkAddress) > 1 {
-			b |= 0x10 // Link Address Size bit (0 = 1 byte, 1 = >1 byte)
-			// Actually, if Link Address is > 1 byte, we need to add the length byte
-			// If Link Address is 1 byte, we just append it.
-			// Let's implement the simple case: Port < 15, Link Address 1 byte (e.g. Backplane slot)
-		}
-		*p = append(*p, b)
-		*p = append(*p, linkAddress...)
-		if len(linkAddress)%2 == 0 {
-			// Port segment must be even length?
-			// "The Port Segment shall be padded to a 16-bit boundary if necessary."
-			// 1 byte segment + 1 byte link address = 2 bytes (OK)
-			// 1 byte segment + 2 byte link address = 3 bytes -> Pad to 4
-		}
+		b = SegmentTypePort | byte(port)
 	} else {
-		// Extended port not implemented yet
-		panic("Extended port segments not implemented")
+		// Extended port: set port nibble to 0x0F
+		b = SegmentTypePort | 0x0F
+	}
+
+	if len(linkAddress) > 1 {
+		b |= 0x10 // Extended link address bit
+	}
+
+	*p = append(*p, b)
+
+	if port >= 15 {
+		// Write the actual port number as a uint16
+		portBytes := make([]byte, 2)
+		binary.LittleEndian.PutUint16(portBytes, uint16(port))
+		*p = append(*p, portBytes...)
+	}
+
+	if len(linkAddress) > 1 {
+		// Write link address length byte
+		*p = append(*p, byte(len(linkAddress)))
+	}
+
+	*p = append(*p, linkAddress...)
+
+	// Pad to 16-bit word boundary if the segment length is odd
+	if (len(*p)-segStart)%2 != 0 {
+		*p = append(*p, 0x00)
 	}
 }
 
