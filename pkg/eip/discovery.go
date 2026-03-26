@@ -77,7 +77,7 @@ func DecodeListIdentityResponse(data []byte) ([]ListIdentityItem, error) {
 			return nil, err
 		}
 
-		if typeID == 0x0C {
+		if typeID == ItemIDListIdentity {
 			// CIP Identity Item
 			item := ListIdentityItem{
 				TypeID: typeID,

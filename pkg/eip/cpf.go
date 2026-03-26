@@ -3,6 +3,7 @@ package eip
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io"
 )
 
@@ -87,6 +88,11 @@ func DecodeCommonPacketFormat(data []byte) (*CommonPacketFormat, error) {
 
 	if err := binary.Read(r, binary.LittleEndian, &cpf.ItemCount); err != nil {
 		return nil, err
+	}
+
+	remaining := r.Len()
+	if remaining < 4*int(cpf.ItemCount) {
+		return nil, fmt.Errorf("cpf: item count %d requires at least %d bytes but only %d remain", cpf.ItemCount, 4*int(cpf.ItemCount), remaining)
 	}
 
 	for i := 0; i < int(cpf.ItemCount); i++ {

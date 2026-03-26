@@ -25,6 +25,8 @@ func NewSetAttributeSingleRequest(path Path, data []byte) *MessageRouterRequest 
 // Let's implement the Rockwell Logix "Read Tag" service (0x4C) as it's most common for "EIP PLCs".
 const ServiceReadTag USINT = 0x4C
 const ServiceWriteTag USINT = 0x4D
+const ServiceReadTagFragmented USINT = 0x52
+const ServiceWriteTagFragmented USINT = 0x53
 
 func NewReadTagRequest(tagPath Path, elements uint16) *MessageRouterRequest {
 	// Read Tag Request Data:
