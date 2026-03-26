@@ -166,11 +166,12 @@ func (r *Runtime) Stop() {
 // handlePacket processes a single UDP packet
 func (r *Runtime) handlePacket(data []byte, remoteAddr *net.UDPAddr) {
 	// Packet format:
-	// Item Count (UINT)
-	// Item 1: Address Item (Connection ID)
-	// Item 2: Data Item (Payload)
+	// Item Count (UINT) [2]
+	// Item 1: Type (UINT) [2] + Length (UINT) [2] + Connection ID (UDINT) [4]
+	// Item 2: Type (UINT) [2] + Length (UINT) [2] + Data...
+	// Minimum size: 2 + 2 + 2 + 4 + 2 + 2 = 14 bytes (with len1 == 4)
 
-	if len(data) < 6 {
+	if len(data) < 14 {
 		return
 	}
 
@@ -214,47 +215,23 @@ func (r *Runtime) handlePacket(data []byte, remoteAddr *net.UDPAddr) {
 
 	payload := data[offset : offset+int(len2)]
 
-	r.mu.RLock()
+	// Use a single write lock for lookup, LastReceive update, and reading conn fields.
+	r.mu.Lock()
 	conn, ok := r.connections[connID]
-	if ok {
-		// Update Watchdog - need write lock?
-		// Actually, IOConnection is a pointer, so we can modify it if we are careful.
-		// But strictly speaking, we should protect it if other goroutines read it.
-		// Scheduler reads it? Scheduler reads RPI, Assembly, etc.
-		// Watchdog reads LastReceive.
-		// So we need to protect LastReceive update.
-		// But we only have RLock here.
-		// Let's upgrade to Lock or use atomic, or just Lock for the lookup too.
-		// Since this is per-packet, Lock might be heavy?
-		// But map read needs RLock.
-		// Let's just use Lock for the whole block if we find it.
-	}
-	r.mu.RUnlock()
-
 	if !ok {
+		r.mu.Unlock()
 		return
 	}
+	conn.LastReceive = time.Now()
 
-	// We need to update LastReceive safely.
-	// Let's use a separate lock on IOConnection or just use Runtime lock.
-	// Using Runtime lock for everything is simplest for now.
-	r.mu.Lock()
-	if conn, ok := r.connections[connID]; ok {
-		conn.LastReceive = time.Now()
-	}
+	// Copy fields needed after unlock
+	runIdleHeader := conn.RunIdleHeader
+	asm := conn.Assembly
 	r.mu.Unlock()
-
-	// Re-acquire RLock for the rest? Or just proceed with `conn` pointer?
-	// `conn` pointer is valid as long as it's not removed.
-	// RemoveConnection deletes from map.
-	// If we hold `conn` pointer, it won't be GC'd.
-	// But if we access fields that might change?
-	// Assembly might change?
-	// For now, let's proceed.
 
 	// Handle Run/Idle Header if present
 	dataOffset := 0
-	if conn.RunIdleHeader {
+	if runIdleHeader {
 		if len(payload) < 4 {
 			return
 		}
@@ -264,33 +241,7 @@ func (r *Runtime) handlePacket(data []byte, remoteAddr *net.UDPAddr) {
 	}
 
 	// Update Assembly Data
-	if conn.Assembly != nil {
-		// Lock assembly? It has its own lock.
-		// Write data to assembly
-		// Note: We need a way to update assembly data from here.
-		// The AssemblyObject has SetAttributeSingle, but that expects full attribute update.
-		// We can just update the data directly if we have access, or add a method.
-		// Since we have the *AssemblyInstance, we can update it directly if we lock it.
-		// But AssemblyInstance struct fields are public but no lock there.
-		// We should probably use AssemblyObject.SetAttributeSingle or similar.
-		// Or better, add UpdateData method to AssemblyObject.
-
-		// For now, let's assume we can overwrite the slice content if size matches.
-		// But we need thread safety. The AssemblyObject has a mutex.
-		// We should use a method on AssemblyObject.
-
-		// Let's use a helper on Runtime that calls AssemblyObject
-		// But we need the Instance ID.
-		// conn.Assembly has ID.
-
-		// Actually, we should probably just update the data in place if we can.
-		// But for correctness, let's use the AssemblyObject lock.
-		// We can't easily access AssemblyObject lock from here without exposing it.
-		// Let's assume for now we just update it.
-		// In a real impl, we'd want a proper method.
-
-		// Let's add SetData to AssemblyObject later. For now, we'll skip the update or do it unsafe.
-		// Wait, I can just call ao.SetAttributeSingle(conn.Assembly.ID, 3, payload[dataOffset:])
-		r.assemblyObj.SetAttributeSingle(conn.Assembly.ID, 3, payload[dataOffset:])
+	if asm != nil {
+		r.assemblyObj.SetAttributeSingle(asm.ID, 3, payload[dataOffset:])
 	}
 }

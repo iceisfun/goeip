@@ -259,13 +259,19 @@ func TestScheduler_SendPacket_SequenceIncrement(t *testing.T) {
 
 	r.AddConnection(conn)
 
-	// Call sendPacket multiple times
+	// Call processTick multiple times with old LastSend to trigger sends
 	for i := 0; i < 5; i++ {
-		s.sendPacket(conn)
+		r.mu.Lock()
+		conn.LastSend = time.Time{}
+		r.mu.Unlock()
+		s.processTick()
 	}
 
-	if conn.SequenceCount != 5 {
-		t.Errorf("SequenceCount = %d, want 5", conn.SequenceCount)
+	r.mu.Lock()
+	seq := conn.SequenceCount
+	r.mu.Unlock()
+	if seq != 5 {
+		t.Errorf("SequenceCount = %d, want 5", seq)
 	}
 }
 
@@ -285,14 +291,26 @@ func TestScheduler_SendPacket_SequenceWrap(t *testing.T) {
 
 	r.AddConnection(conn)
 
-	s.sendPacket(conn) // 0xFFFF
-	if conn.SequenceCount != 0xFFFF {
-		t.Errorf("SequenceCount = %d, want 0xFFFF", conn.SequenceCount)
+	r.mu.Lock()
+	conn.LastSend = time.Time{}
+	r.mu.Unlock()
+	s.processTick() // 0xFFFF
+	r.mu.Lock()
+	seq := conn.SequenceCount
+	r.mu.Unlock()
+	if seq != 0xFFFF {
+		t.Errorf("SequenceCount = %d, want 0xFFFF", seq)
 	}
 
-	s.sendPacket(conn) // 0x0000 (wrap)
-	if conn.SequenceCount != 0x0000 {
-		t.Errorf("SequenceCount = %d, want 0x0000 (wrapped)", conn.SequenceCount)
+	r.mu.Lock()
+	conn.LastSend = time.Time{}
+	r.mu.Unlock()
+	s.processTick() // 0x0000 (wrap)
+	r.mu.Lock()
+	seq = conn.SequenceCount
+	r.mu.Unlock()
+	if seq != 0x0000 {
+		t.Errorf("SequenceCount = %d, want 0x0000 (wrapped)", seq)
 	}
 }
 
@@ -342,7 +360,10 @@ func TestScheduler_SendPacket_WithRunIdleHeader(t *testing.T) {
 		packetChan <- buf[:n]
 	}()
 
-	s.sendPacket(conn)
+	r.mu.Lock()
+	conn.LastSend = time.Time{}
+	r.mu.Unlock()
+	s.processTick()
 
 	select {
 	case packet := <-packetChan:
@@ -437,11 +458,17 @@ func TestScheduler_SendPacket_NoRemoteAddr(t *testing.T) {
 	r.AddConnection(conn)
 
 	// Should not panic even with nil RemoteAddr
-	s.sendPacket(conn)
+	r.mu.Lock()
+	conn.LastSend = time.Time{}
+	r.mu.Unlock()
+	s.processTick()
 
 	// Sequence should still increment
-	if conn.SequenceCount != 1 {
-		t.Errorf("SequenceCount = %d, want 1", conn.SequenceCount)
+	r.mu.Lock()
+	seq := conn.SequenceCount
+	r.mu.Unlock()
+	if seq != 1 {
+		t.Errorf("SequenceCount = %d, want 1", seq)
 	}
 }
 
