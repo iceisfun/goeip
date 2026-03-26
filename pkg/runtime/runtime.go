@@ -31,6 +31,8 @@ type Runtime struct {
 	conn        *net.UDPConn
 	connections map[uint32]*IOConnection // Map by ConnectionID (Consuming ID)
 	assemblyObj *assembly.AssemblyObject
+	done        chan struct{}
+	wg          sync.WaitGroup
 }
 
 // NewRuntime creates a new Runtime
@@ -53,9 +55,17 @@ func (r *Runtime) Start(address string) error {
 		return err
 	}
 	r.conn = conn
+	r.done = make(chan struct{})
 
-	go r.listenLoop()
-	go r.watchdogLoop()
+	r.wg.Add(2)
+	go func() {
+		defer r.wg.Done()
+		r.listenLoop()
+	}()
+	go func() {
+		defer r.wg.Done()
+		r.watchdogLoop()
+	}()
 
 	return nil
 }
@@ -80,8 +90,13 @@ func (r *Runtime) watchdogLoop() {
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		r.checkTimeouts()
+	for {
+		select {
+		case <-r.done:
+			return
+		case <-ticker.C:
+			r.checkTimeouts()
+		}
 	}
 }
 
@@ -128,12 +143,24 @@ func (r *Runtime) listenLoop() {
 	for {
 		n, remoteAddr, err := r.conn.ReadFromUDP(buf)
 		if err != nil {
+			select {
+			case <-r.done:
+				return
+			default:
+			}
 			// Log error or exit
 			return
 		}
 
 		r.handlePacket(buf[:n], remoteAddr)
 	}
+}
+
+// Stop stops the runtime, closing the UDP connection and waiting for goroutines to exit
+func (r *Runtime) Stop() {
+	close(r.done)
+	r.conn.Close()
+	r.wg.Wait()
 }
 
 // handlePacket processes a single UDP packet

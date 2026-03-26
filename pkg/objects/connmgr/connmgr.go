@@ -17,8 +17,11 @@ type ConnectionManager struct {
 
 // Connection represents a logical CIP connection
 type Connection struct {
-	OTConnectionID uint32
-	TOConnectionID uint32
+	OTConnectionID         uint32
+	TOConnectionID         uint32
+	ConnectionSerialNumber cip.UINT
+	VendorID               cip.UINT
+	OriginatorSerialNumber cip.UDINT
 	// Add more fields as needed for runtime
 }
 
@@ -101,8 +104,11 @@ func (cm *ConnectionManager) HandleForwardOpen(reqData []byte) ([]byte, error) {
 
 	// Store connection (simplified)
 	conn := &Connection{
-		OTConnectionID: uint32(req.OTConnectionID),
-		TOConnectionID: myConnID,
+		OTConnectionID:         uint32(req.OTConnectionID),
+		TOConnectionID:         myConnID,
+		ConnectionSerialNumber: req.ConnectionSerialNumber,
+		VendorID:               req.VendorID,
+		OriginatorSerialNumber: req.OriginatorSerialNumber,
 	}
 	cm.connections[myConnID] = conn
 
@@ -186,9 +192,17 @@ func (cm *ConnectionManager) HandleForwardClose(reqData []byte) ([]byte, error) 
 		return nil, err
 	}
 
-	// Logic to find and remove connection
-	// In a real implementation, we would look up by Triad (Serial, Vendor, Originator)
-	// For now, we'll just pretend we closed it.
+	// Find and remove connection by triad (Serial, Vendor, Originator)
+	cm.mu.Lock()
+	for id, conn := range cm.connections {
+		if conn.ConnectionSerialNumber == req.ConnectionSerialNumber &&
+			conn.VendorID == req.VendorID &&
+			conn.OriginatorSerialNumber == req.OriginatorSerialNumber {
+			delete(cm.connections, id)
+			break
+		}
+	}
+	cm.mu.Unlock()
 
 	resp := &ForwardCloseResponse{
 		ConnectionSerialNumber: req.ConnectionSerialNumber,
@@ -283,8 +297,11 @@ func (cm *ConnectionManager) HandleLargeForwardOpen(reqData []byte) ([]byte, err
 	myConnID := cm.nextConnID
 
 	conn := &Connection{
-		OTConnectionID: uint32(req.OTConnectionID),
-		TOConnectionID: myConnID,
+		OTConnectionID:         uint32(req.OTConnectionID),
+		TOConnectionID:         myConnID,
+		ConnectionSerialNumber: req.ConnectionSerialNumber,
+		VendorID:               req.VendorID,
+		OriginatorSerialNumber: req.OriginatorSerialNumber,
 	}
 	cm.connections[myConnID] = conn
 

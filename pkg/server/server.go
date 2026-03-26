@@ -16,6 +16,8 @@ import (
 type Server struct {
 	router *cip.MessageRouter
 	mu     sync.Mutex
+	ln     net.Listener
+	done   chan struct{}
 }
 
 // NewServer creates a new Server
@@ -32,14 +34,27 @@ func (s *Server) Start(address string) error {
 		return err
 	}
 
+	s.ln = ln
+	s.done = make(chan struct{})
 	go s.acceptLoop(ln)
 	return nil
+}
+
+// Stop gracefully stops the server by closing the listener and stopping the accept loop
+func (s *Server) Stop() error {
+	close(s.done)
+	return s.ln.Close()
 }
 
 func (s *Server) acceptLoop(ln net.Listener) {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
+			select {
+			case <-s.done:
+				return
+			default:
+			}
 			// Log error
 			continue
 		}

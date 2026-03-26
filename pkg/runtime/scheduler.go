@@ -2,13 +2,15 @@ package runtime
 
 import (
 	"encoding/binary"
+	"sync"
 	"time"
 )
 
 // Scheduler manages the RPI (Requested Packet Interval) for producing connections
 type Scheduler struct {
-	runtime *Runtime
-	stop    chan struct{}
+	runtime  *Runtime
+	stop     chan struct{}
+	stopOnce sync.Once
 }
 
 // NewScheduler creates a new Scheduler
@@ -26,7 +28,9 @@ func (s *Scheduler) Start() {
 
 // Stop stops the scheduler
 func (s *Scheduler) Stop() {
-	close(s.stop)
+	s.stopOnce.Do(func() {
+		close(s.stop)
+	})
 }
 
 // run is the main loop
