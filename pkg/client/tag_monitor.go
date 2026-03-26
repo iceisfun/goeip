@@ -192,6 +192,7 @@ func (m *TagMonitor) emit(event TagEvent) {
 	select {
 	case <-m.stopCh:
 	case m.events <- event:
+	default:
 	}
 }
 
