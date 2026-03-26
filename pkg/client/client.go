@@ -41,7 +41,7 @@ func NewClient(t Transport, opts ...Option) *Client {
 
 // Connect is a convenience constructor that creates a direct (non-reconnecting)
 // client. It connects immediately and returns an error on failure.
-func Connect(address string, logger internal.Logger) (*Client, error) {
+func Connect(address string, logger internal.Logger, opts ...Option) (*Client, error) {
 	if logger == nil {
 		logger = internal.NopLogger()
 	}
@@ -49,7 +49,8 @@ func Connect(address string, logger internal.Logger) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewClient(t, WithLogger(logger)), nil
+	opts = append([]Option{WithLogger(logger)}, opts...)
+	return NewClient(t, opts...), nil
 }
 
 // Close closes the client connection.

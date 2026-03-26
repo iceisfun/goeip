@@ -97,7 +97,7 @@ func (r *reconnectingTransport) Reset(stale *session.Session) error {
 		r.cfg.onDisconnect(err)
 	}
 
-	return nil
+	return err
 }
 
 // Close permanently shuts down the transport.
