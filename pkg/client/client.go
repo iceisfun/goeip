@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"time"
@@ -182,7 +183,16 @@ func (c *Client) ReadTagElementsInto(tagName string, count uint16, dst any) erro
 		return fmt.Errorf("response too short to contain type code")
 	}
 
-	return cip.Unmarshal(data[2:], dst)
+	typeCode := cip.DataType(binary.LittleEndian.Uint16(data[0:2]))
+	hdrLen := 2
+	if typeCode >= cip.TypeSTRUCT {
+		hdrLen = 4
+	}
+	if len(data) < hdrLen {
+		return fmt.Errorf("response too short for type header")
+	}
+
+	return cip.Unmarshal(data[hdrLen:], dst)
 }
 
 // ReadTimer reads a Timer tag from the PLC and decodes it.
@@ -196,5 +206,14 @@ func (c *Client) ReadTimer(tagName string) (*cip.Timer, error) {
 		return nil, fmt.Errorf("response too short to contain type code")
 	}
 
-	return cip.DecodeTimer(data[2:])
+	typeCode := cip.DataType(binary.LittleEndian.Uint16(data[0:2]))
+	hdrLen := 2
+	if typeCode >= cip.TypeSTRUCT {
+		hdrLen = 4
+	}
+	if len(data) < hdrLen {
+		return nil, fmt.Errorf("response too short for type header")
+	}
+
+	return cip.DecodeTimer(data[hdrLen:])
 }

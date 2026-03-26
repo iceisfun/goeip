@@ -309,7 +309,7 @@ func TestClient_ReadTimer(t *testing.T) {
 		// ACC: 2500
 		binary.LittleEndian.PutUint32(timerData[10:14], 2500)
 
-		cipData := []byte{0xCC, 0x00, 0x00, 0x00, 0x02, 0xA0} // Type 0xA002 (Little Endian)
+		cipData := []byte{0xCC, 0x00, 0x00, 0x00, 0x02, 0xA0, 0x00, 0x00} // Type 0xA002 (struct), struct handle 0x0000
 		cipData = append(cipData, timerData...)
 
 		cpf := make([]byte, 2+4+4+len(cipData))
